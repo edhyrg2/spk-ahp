@@ -107,6 +107,8 @@ class PerbandinganKriteriaController extends Controller
      */
     public function store(Request $request)
     {
+        $periodes = Periode::all();
+        $periode = $request->input('periode');
         $arahInput = $request->input('arah');   // Array: arah[A][B]
         $nilaiInput = $request->input('nilai'); // Array: nilai[A][B]
         // dd($arahInput, $nilaiInput);
@@ -137,6 +139,7 @@ class PerbandinganKriteriaController extends Controller
                     [
                         'kriteria1_id' => $id1,
                         'kriteria2_id' => $id2,
+                        'periode' => $periode,
                     ],
                     [
                         'nilai' => $nilaiFinal,
@@ -149,7 +152,7 @@ class PerbandinganKriteriaController extends Controller
         $kriteria = Kriteria::all();
         $perbandingan = PerbandinganKriteria::all();
 
-        return view('Admin.perbandingan-kriteria.index', compact('kriteria', 'perbandingan', 'kriteriaList'))->with('success', 'Perbandingan kriteria berhasil disimpan.');
+        return view('Admin.perbandingan-kriteria.index', compact('kriteria', 'perbandingan', 'kriteriaList', 'periodes'))->with('success', 'Perbandingan kriteria berhasil disimpan.');
     }
 
     /**

@@ -96,7 +96,7 @@
 
             <footer class="sticky-footer bg-white">
                 <div class="container my-auto text-center text-black">
-                    <span style="color: black;">&copy; RG</span>
+                    <!-- <span style="color: black;">&copy; RG</span> -->
                 </div>
             </footer>
         </div>

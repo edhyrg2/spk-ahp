@@ -8,6 +8,7 @@ use App\Models\PerbandinganKriteria;
 use App\Models\PerbandinganAlternatif;
 use App\Models\Alternatif;
 use App\Models\Periode;
+use PDF;
 
 class RankingAkhirController extends Controller
 {
@@ -88,6 +89,85 @@ class RankingAkhirController extends Controller
         }
 
         return view('Admin.ranking-akhir.index', compact('alternatif', 'nilaiAkhir', 'periodes', 'periode_id', 'sudahAdaTerpilih'));
+    }
+    
+    /**
+     * Generate PDF for printing
+     */
+    public function print($periode_id)
+    {
+        $periode = Periode::where('nama_periode', $periode_id)->first();
+        $kriteria = Kriteria::where('periode', $periode_id)->get();
+        $perbandingan = PerbandinganKriteria::where('periode', $periode_id)->get();
+        $kriteriaIds = Kriteria::where('periode', $periode_id)->pluck('id')->toArray();
+        $alternatif = Alternatif::where('periode', $periode_id)->get();
+        $nilaiAkhir = [];
+        
+        // Calculate final scores
+        if ($kriteria->isEmpty() || $alternatif->isEmpty() || $perbandingan->isEmpty()) {
+            foreach ($alternatif as $alt) {
+                $nilaiAkhir[$alt->id] = 0;
+            }
+        } else {
+            $matrix_kriteria = [];
+
+            foreach ($kriteriaIds as $rowId) {
+                foreach ($kriteriaIds as $colId) {
+                    $nilai = $perbandingan->where('kriteria1_id', $rowId)->where('kriteria2_id', $colId)->first();
+                    $matrix_kriteria[$rowId][$colId] = $nilai ? $nilai->nilai : 1;
+                }
+            }
+
+            $eigen_kriteria = $this->calculateEigenVector($matrix_kriteria, $kriteriaIds);
+            $bobotKriteria = $eigen_kriteria['eigen_vector'];
+
+            foreach ($alternatif as $alt) {
+                $total = 0;
+                foreach ($kriteria as $k) {
+                    $rel = PerbandinganAlternatif::where('kriteria_id', $k->id)->get();
+                    $altIds = $alternatif->pluck('id')->toArray();
+
+                    // Build matrix for this criteria
+                    $matrix = [];
+                    foreach ($altIds as $i) {
+                        foreach ($altIds as $j) {
+                            if ($i == $j) {
+                                $matrix[$i][$j] = 1;
+                            } else {
+                                $nilaiLangsung = $rel->first(function ($item) use ($i, $j) {
+                                    return $item->alternatif1_id == $i && $item->alternatif2_id == $j;
+                                });
+
+                                if ($nilaiLangsung) {
+                                    $matrix[$i][$j] = $nilaiLangsung->nilai;
+                                } else {
+                                    $nilaiKebalikan = $rel->first(function ($item) use ($i, $j) {
+                                        return $item->alternatif1_id == $j && $item->alternatif2_id == $i;
+                                    });
+
+                                    $matrix[$i][$j] = $nilaiKebalikan ? 1 / $nilaiKebalikan->nilai : 1;
+                                }
+                            }
+                        }
+                    }
+
+                    $eigenAlt = $this->calculateEigenVector($matrix, $altIds);
+                    $bobotAlternatif = $eigenAlt['eigen_vector'];
+
+                    $total += $bobotKriteria[$k->id] * ($bobotAlternatif[$alt->id] ?? 0);
+                }
+
+                $nilaiAkhir[$alt->id] = $total;
+            }
+        }
+        
+        $ranked = collect($nilaiAkhir)->sortDesc();
+        
+        // Generate PDF
+        $pdf = app('dompdf.wrapper');
+        $pdf->loadView('Admin.ranking-akhir.print', compact('alternatif', 'ranked', 'periode'));
+        
+        return $pdf->stream('hasil-pemilihan-alternatif.pdf');
     }
 
     function calculateEigenVector(array $matrix, array $kriteriaIds): array

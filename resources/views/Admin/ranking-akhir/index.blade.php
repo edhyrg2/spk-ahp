@@ -4,7 +4,14 @@
 <div class="col-md-12 my-4">
     <div class="card shadow">
         <div class="card-header">
-            <h5 class="text-gray-900">Hasil Akhir Pemilihan Alternatif</h5>
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="text-gray-900">Hasil Akhir Pemilihan Alternatif</h5>
+                @if(request('periode'))
+                <a href="{{ route('ranking-akhir.print', ['periode' => request('periode')]) }}" class="btn btn-success" target="_blank">
+                    <i class="fas fa-print"></i> Cetak PDF
+                </a>
+                @endif
+            </div>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('ranking-akhir.index.admin') }}" class="mb-4">
