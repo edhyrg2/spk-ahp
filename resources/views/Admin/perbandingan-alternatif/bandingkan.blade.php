@@ -17,6 +17,7 @@
             <form method="POST" action="{{ route('perbandingan-alternatif.store.admin') }}">
                 @csrf
                 <input type="hidden" name="kriteria_id" value="{{ $kriteria->id }}">
+                <input type="hidden" name="periode" value="{{ request('periode') }}">
 
                 <div class="alert alert-info">
                     <strong>Petunjuk:</strong>

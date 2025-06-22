@@ -58,6 +58,7 @@ Route::middleware(['web', 'auth', 'role:admin'])->group(function () {
     Route::get('/admin/ranking-akhir', [RankingAkhirController::class, 'index'])->name('ranking-akhir.index.admin');
     Route::get('/admin/ranking-akhir/print/{periode}', [RankingAkhirController::class, 'print'])->name('ranking-akhir.print');
     // Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/admin/ranking-akhir/print', [RankingAkhirController::class, 'print'])->name('ranking-akhir.print');
 });
 
 Route::middleware(['web', 'auth', 'role:user'])->group(function () {

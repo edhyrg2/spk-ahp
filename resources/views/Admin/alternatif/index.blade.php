@@ -49,7 +49,7 @@
                         <td>{{ $a->periode }}</td>
                         <td>
                             <a
-                                href="{{ route('alternatif.edit.admin', $a->id) }}"
+                                href="{{ route('alternatif.edit.admin', [$a->id, 'periode' => request('periode')]) }}"
                                 class="btn btn-warning {{ !request('periode') ? 'disabled' : '' }}"
                                 @if(!request('periode')) onclick="return false;" @endif>
                                 <i class="fas fa-edit"></i>

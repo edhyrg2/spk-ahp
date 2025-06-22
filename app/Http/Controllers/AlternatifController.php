@@ -84,9 +84,9 @@ class AlternatifController extends Controller
     public function update(Request $request, string $id)
     {
         $alternatifValidated = $request->validate([
-            'wilayah' => 'required|exists:alternatif,wilayah',
+            'wilayah' => 'required',
             'alamat' => 'required',
-            'periode' => 'required|exists:periodes,id',
+            'periode' => 'required',
         ]);
 
         try {

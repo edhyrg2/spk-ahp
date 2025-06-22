@@ -14,14 +14,14 @@
                     <tr>
                         <th>Alternatif</th>
                         @foreach($alternatif as $alt)
-                        <th>{{ $alt->nama_siswa }}</th>
+                        <th>{{ $alt->wilayah }}</th>
                         @endforeach
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($alternatif as $row)
                     <tr>
-                        <th>{{ $row->nama_siswa }}</th>
+                        <th>{{ $row->wilayah }}</th>
                         @foreach($alternatif as $col)
                         <td>{{ number_format($matrix[$row->id][$col->id], 4) }}</td>
                         @endforeach
@@ -38,7 +38,7 @@
                     <tr>
                         <th>Alternatif</th>
                         @foreach($alternatif as $alt)
-                        <th>{{ $alt->nama_siswa }}</th>
+                        <th>{{ $alt->wilayah }}</th>
                         @endforeach
                         <th>Priority Vector</th>
                     </tr>
@@ -46,7 +46,7 @@
                 <tbody>
                     @foreach($alternatif as $row)
                     <tr>
-                        <th>{{ $row->nama_siswa }}</th>
+                        <th>{{ $row->wilayah }}</th>
                         @foreach($alternatif as $col)
                         <td>{{ number_format($normalized[$row->id][$col->id], 4) }}</td>
                         @endforeach

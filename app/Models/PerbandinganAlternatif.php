@@ -9,7 +9,7 @@ class PerbandinganAlternatif extends Model
 {
     use HasFactory;
     protected $table = 'perbandingan_alternatif';
-    protected $fillable = ['kriteria_id', 'alternatif1_id', 'alternatif2_id', 'nilai'];
+    protected $fillable = ['periode', 'kriteria_id', 'alternatif1_id', 'alternatif2_id', 'nilai'];
 
     public function kriteria()
     {

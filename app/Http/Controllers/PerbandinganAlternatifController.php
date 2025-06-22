@@ -54,13 +54,18 @@ class PerbandinganAlternatifController extends Controller
         $request->validate([
             'kriteria_id' => 'required|exists:kriteria,id',
             'nilai' => 'required|array',
+            'periode' => 'required',
         ]);
 
         $kriteria_id = $request->kriteria_id;
+        $periode = $request->periode;
+
         $nilaiInput = $request->nilai;
 
-        // Hapus data lama untuk kriteria ini
-        PerbandinganAlternatif::where('kriteria_id', $kriteria_id)->delete();
+        // Hapus data lama untuk kriteria dan periode ini
+        PerbandinganAlternatif::where('kriteria_id', $kriteria_id)
+            ->where('periode', $periode)
+            ->delete();
 
         foreach ($nilaiInput as $alt1_id => $row) {
             foreach ($row as $alt2_id => $value) {
@@ -70,6 +75,7 @@ class PerbandinganAlternatifController extends Controller
                 // Simpan nilai asli
                 PerbandinganAlternatif::create([
                     'kriteria_id' => $kriteria_id,
+                    'periode' => $periode,
                     'alternatif1_id' => $alt1_id,
                     'alternatif2_id' => $alt2_id,
                     'nilai' => $val,
@@ -78,6 +84,7 @@ class PerbandinganAlternatifController extends Controller
                 // Simpan nilai kebalikan (reciprocal)
                 PerbandinganAlternatif::create([
                     'kriteria_id' => $kriteria_id,
+                    'periode' => $periode,
                     'alternatif1_id' => $alt2_id,
                     'alternatif2_id' => $alt1_id,
                     'nilai' => round(1 / $val, 4),
@@ -85,7 +92,7 @@ class PerbandinganAlternatifController extends Controller
             }
         }
 
-        return redirect()->route('perbandingan-alternatif.index.admin')
+        return redirect()->route('perbandingan-alternatif.index.admin', ['periode' => $periode])
             ->with('success', 'Perbandingan alternatif berhasil disimpan.');
     }
 

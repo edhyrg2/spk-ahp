@@ -27,6 +27,7 @@
             </form>
             <form method="POST" action="{{ route('perbandingan-kriteria.store.admin') }}">
                 @csrf
+                <input type="hidden" name="periode" value="{{ request('periode') }}">
                 <div class="container">
                     <div class="row font-weight-bold text-gray-900 mb-2">
                         <div class="col-md-4">Pasangan Kriteria</div>

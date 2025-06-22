@@ -8,6 +8,7 @@ use App\Models\PerbandinganKriteria;
 use App\Models\PerbandinganAlternatif;
 use App\Models\Alternatif;
 use App\Models\Periode;
+use PhpOffice\PhpWord\TemplateProcessor;
 use PDF;
 
 class RankingAkhirController extends Controller
@@ -90,85 +91,85 @@ class RankingAkhirController extends Controller
 
         return view('Admin.ranking-akhir.index', compact('alternatif', 'nilaiAkhir', 'periodes', 'periode_id', 'sudahAdaTerpilih'));
     }
-    
+
     /**
      * Generate PDF for printing
      */
-    public function print($periode_id)
-    {
-        $periode = Periode::where('nama_periode', $periode_id)->first();
-        $kriteria = Kriteria::where('periode', $periode_id)->get();
-        $perbandingan = PerbandinganKriteria::where('periode', $periode_id)->get();
-        $kriteriaIds = Kriteria::where('periode', $periode_id)->pluck('id')->toArray();
-        $alternatif = Alternatif::where('periode', $periode_id)->get();
-        $nilaiAkhir = [];
-        
-        // Calculate final scores
-        if ($kriteria->isEmpty() || $alternatif->isEmpty() || $perbandingan->isEmpty()) {
-            foreach ($alternatif as $alt) {
-                $nilaiAkhir[$alt->id] = 0;
-            }
-        } else {
-            $matrix_kriteria = [];
+    // public function print($periode_id)
+    // {
+    //     $periode = Periode::where('nama_periode', $periode_id)->first();
+    //     $kriteria = Kriteria::where('periode', $periode_id)->get();
+    //     $perbandingan = PerbandinganKriteria::where('periode', $periode_id)->get();
+    //     $kriteriaIds = Kriteria::where('periode', $periode_id)->pluck('id')->toArray();
+    //     $alternatif = Alternatif::where('periode', $periode_id)->get();
+    //     $nilaiAkhir = [];
 
-            foreach ($kriteriaIds as $rowId) {
-                foreach ($kriteriaIds as $colId) {
-                    $nilai = $perbandingan->where('kriteria1_id', $rowId)->where('kriteria2_id', $colId)->first();
-                    $matrix_kriteria[$rowId][$colId] = $nilai ? $nilai->nilai : 1;
-                }
-            }
+    //     // Calculate final scores
+    //     if ($kriteria->isEmpty() || $alternatif->isEmpty() || $perbandingan->isEmpty()) {
+    //         foreach ($alternatif as $alt) {
+    //             $nilaiAkhir[$alt->id] = 0;
+    //         }
+    //     } else {
+    //         $matrix_kriteria = [];
 
-            $eigen_kriteria = $this->calculateEigenVector($matrix_kriteria, $kriteriaIds);
-            $bobotKriteria = $eigen_kriteria['eigen_vector'];
+    //         foreach ($kriteriaIds as $rowId) {
+    //             foreach ($kriteriaIds as $colId) {
+    //                 $nilai = $perbandingan->where('kriteria1_id', $rowId)->where('kriteria2_id', $colId)->first();
+    //                 $matrix_kriteria[$rowId][$colId] = $nilai ? $nilai->nilai : 1;
+    //             }
+    //         }
 
-            foreach ($alternatif as $alt) {
-                $total = 0;
-                foreach ($kriteria as $k) {
-                    $rel = PerbandinganAlternatif::where('kriteria_id', $k->id)->get();
-                    $altIds = $alternatif->pluck('id')->toArray();
+    //         $eigen_kriteria = $this->calculateEigenVector($matrix_kriteria, $kriteriaIds);
+    //         $bobotKriteria = $eigen_kriteria['eigen_vector'];
 
-                    // Build matrix for this criteria
-                    $matrix = [];
-                    foreach ($altIds as $i) {
-                        foreach ($altIds as $j) {
-                            if ($i == $j) {
-                                $matrix[$i][$j] = 1;
-                            } else {
-                                $nilaiLangsung = $rel->first(function ($item) use ($i, $j) {
-                                    return $item->alternatif1_id == $i && $item->alternatif2_id == $j;
-                                });
+    //         foreach ($alternatif as $alt) {
+    //             $total = 0;
+    //             foreach ($kriteria as $k) {
+    //                 $rel = PerbandinganAlternatif::where('kriteria_id', $k->id)->get();
+    //                 $altIds = $alternatif->pluck('id')->toArray();
 
-                                if ($nilaiLangsung) {
-                                    $matrix[$i][$j] = $nilaiLangsung->nilai;
-                                } else {
-                                    $nilaiKebalikan = $rel->first(function ($item) use ($i, $j) {
-                                        return $item->alternatif1_id == $j && $item->alternatif2_id == $i;
-                                    });
+    //                 // Build matrix for this criteria
+    //                 $matrix = [];
+    //                 foreach ($altIds as $i) {
+    //                     foreach ($altIds as $j) {
+    //                         if ($i == $j) {
+    //                             $matrix[$i][$j] = 1;
+    //                         } else {
+    //                             $nilaiLangsung = $rel->first(function ($item) use ($i, $j) {
+    //                                 return $item->alternatif1_id == $i && $item->alternatif2_id == $j;
+    //                             });
 
-                                    $matrix[$i][$j] = $nilaiKebalikan ? 1 / $nilaiKebalikan->nilai : 1;
-                                }
-                            }
-                        }
-                    }
+    //                             if ($nilaiLangsung) {
+    //                                 $matrix[$i][$j] = $nilaiLangsung->nilai;
+    //                             } else {
+    //                                 $nilaiKebalikan = $rel->first(function ($item) use ($i, $j) {
+    //                                     return $item->alternatif1_id == $j && $item->alternatif2_id == $i;
+    //                                 });
 
-                    $eigenAlt = $this->calculateEigenVector($matrix, $altIds);
-                    $bobotAlternatif = $eigenAlt['eigen_vector'];
+    //                                 $matrix[$i][$j] = $nilaiKebalikan ? 1 / $nilaiKebalikan->nilai : 1;
+    //                             }
+    //                         }
+    //                     }
+    //                 }
 
-                    $total += $bobotKriteria[$k->id] * ($bobotAlternatif[$alt->id] ?? 0);
-                }
+    //                 $eigenAlt = $this->calculateEigenVector($matrix, $altIds);
+    //                 $bobotAlternatif = $eigenAlt['eigen_vector'];
 
-                $nilaiAkhir[$alt->id] = $total;
-            }
-        }
-        
-        $ranked = collect($nilaiAkhir)->sortDesc();
-        
-        // Generate PDF
-        $pdf = app('dompdf.wrapper');
-        $pdf->loadView('Admin.ranking-akhir.print', compact('alternatif', 'ranked', 'periode'));
-        
-        return $pdf->stream('hasil-pemilihan-alternatif.pdf');
-    }
+    //                 $total += $bobotKriteria[$k->id] * ($bobotAlternatif[$alt->id] ?? 0);
+    //             }
+
+    //             $nilaiAkhir[$alt->id] = $total;
+    //         }
+    //     }
+
+    //     $ranked = collect($nilaiAkhir)->sortDesc();
+
+    //     // Generate PDF
+    //     $pdf = app('dompdf.wrapper');
+    //     $pdf->loadView('Admin.ranking-akhir.print', compact('alternatif', 'ranked', 'periode'));
+
+    //     return $pdf->stream('hasil-pemilihan-alternatif.pdf');
+    // }
 
     function calculateEigenVector(array $matrix, array $kriteriaIds): array
     {
@@ -200,6 +201,30 @@ class RankingAkhirController extends Controller
             'normalized' => $normalized,
             'eigen_vector' => $eigen_vector
         ];
+    }
+
+    public function print(Request $request)
+    {
+        $periode = $request->input('periode');
+        // Ambil alternatif terpilih (misal yang field 'pilih' == 'Dipilih' dan periode sesuai)
+        $alternatif = \App\Models\Alternatif::where('periode', $periode)->where('pilih', 'Dipilih')->first();
+
+        if (!$alternatif) {
+            return back()->with('error', 'Belum ada alternatif terpilih.');
+        }
+
+        $templatePath = storage_path('app/template_surat.docx');
+        $templateProcessor = new TemplateProcessor($templatePath);
+
+        // Set value placeholder di template
+        $templateProcessor->setValue('wilayah', $alternatif->wilayah);
+
+        // Simpan file hasil
+        $outputPath = storage_path('app/surat_hasil_ranking.docx');
+        $templateProcessor->saveAs($outputPath);
+
+        // Download file
+        return response()->download($outputPath)->deleteFileAfterSend(true);
     }
 
     /**
