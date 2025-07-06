@@ -1,0 +1,160 @@
+# Laravel specific
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.phpunit.result.cache
+docker-compose.override.yml
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+/.idea
+/.vscode
+
+# Laravel Mix / Vite
+/public/mix-manifest.json
+/public/build
+
+# Cache and logs
+bootstrap/cache/*.php
+storage/app/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/logs/*
+!storage/app/.gitkeep
+!storage/app/public/.gitkeep
+!storage/framework/cache/.gitkeep
+!storage/framework/sessions/.gitkeep
+!storage/framework/testing/.gitkeep
+!storage/framework/views/.gitkeep
+!storage/logs/.gitkeep
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Composer
+composer.phar
+
+# PHPStorm
+.idea/
+
+# VS Code
+.vscode/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# NetBeans
+nbproject/
+
+# Eclipse
+.buildpath
+.project
+.settings/
+
+# Windows
+Desktop.ini
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Coverage reports
+coverage/
+*.coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Laravel Telescope (if used)
+storage/telescope
+
+# Laravel Horizon (if used)
+horizon.sqlite
+
+# PHP CS Fixer
+.php_cs.cache
+
+# PHPUnit
+.phpunit.cache
+
+# Pest
+.pest
+
+# Laravel Sail
+docker-compose.override.yml
+
+# Local development
+.vagrant/
+Vagrantfile.local
+
+# Backup files
+*.bak
+*.backup
+
+# Temporary files
+*.tmp
+*.temp
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Custom project files (if any)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# Laravel Debugbar (if used)
+storage/debugbar
+
+# Laravel Dusk (if used)
+tests/Browser/screenshots/*
+tests/Browser/console/*
+
+# NPM/Yarn lock files (choose one)
+# package-lock.json
+# yarn.lock
+
+# Production assets
+/public/css/app.css
+/public/js/app.js
