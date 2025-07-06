@@ -12,7 +12,20 @@
         <div class="card-body">
             <form action="{{ route('alternatif.store.admin') }}" method="POST">
                 @csrf
-                <input type="hidden" name="periode" value="{{ request('periode') }}">
+                
+                <!-- Dropdown Periode -->
+                <div class="form-group text-gray-900">
+                    <label for="periode">Periode</label>
+                    <select name="periode" class="form-control" required>
+                        <option value="">Pilih Periode</option>
+                        @foreach($periodes as $periode)
+                            <option value="{{ $periode->nama_periode }}" {{ $periodeId == $periode->nama_periode ? 'selected' : '' }}>
+                                {{ $periode->nama_periode }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                
                 <div class="form-group text-gray-900">
                     <label for="wilayah">Wilayah</label>
                     <input type="text" name="wilayah" class="form-control" required>
@@ -21,6 +34,10 @@
                     <label for="alamat">Alamat</label>
                     <input type="text" name="alamat" class="form-control" required>
                 </div>
+                
+                <!-- Hidden field untuk pilih dengan default value -->
+                <input type="hidden" name="pilih" value="Tidak Dipilih">
+                
                 <button type="submit" class="btn btn-primary">Simpan</button>
             </form>
         </div>

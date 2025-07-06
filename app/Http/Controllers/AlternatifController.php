@@ -21,7 +21,8 @@ class AlternatifController extends Controller
         if ($periodeId) {
             $alternatif = Alternatif::where('periode', $periodeId)->get();
         } else {
-            $alternatif = Alternatif::where('periode', 0)->get();
+            // Jika tidak ada periode yang dipilih, ambil periode pertama atau kosong
+            $alternatif = Alternatif::where('periode', '')->get();
         }
 
         return view('Admin.alternatif.index', compact('alternatif', 'periodes', 'periodeId'));
@@ -30,9 +31,12 @@ class AlternatifController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
-        return view('Admin.alternatif.create');
+        $periodes = Periode::all();
+        $periodeId = $request->input('periode');
+        
+        return view('Admin.alternatif.create', compact('periodes', 'periodeId'));
     }
 
     /**
@@ -43,9 +47,18 @@ class AlternatifController extends Controller
         $alternatifValidated = $request->validate([
             'wilayah' => 'required',
             'alamat' => 'required',
-            'periode' => 'required',
+            'periode' => 'required|string',
+            'pilih' => 'nullable|string',
         ]);
-
+        
+        // Set default value untuk pilih jika tidak ada
+        if (!isset($alternatifValidated['pilih']) || empty($alternatifValidated['pilih'])) {
+            $alternatifValidated['pilih'] = 'Tidak Dipilih';
+        }
+        
+        // Debug: uncomment untuk melihat data yang akan disimpan
+        // dd($alternatifValidated);
+        
         try {
             DB::beginTransaction();
 
@@ -56,8 +69,10 @@ class AlternatifController extends Controller
                 ->with('success', 'Data alternatif berhasil ditambahkan');
         } catch (\Throwable $th) {
             DB::rollBack();
+            // Debug: uncomment untuk melihat error detail
+            // dd($th->getMessage());
             return redirect()->route('alternatif.index.admin', ['periode' => $request->input('periode')])
-                ->with('error', 'Data alternatif gagal ditambahkan');
+                ->with('error', 'Data alternatif gagal ditambahkan: ' . $th->getMessage());
         }
     }
 
@@ -86,7 +101,7 @@ class AlternatifController extends Controller
         $alternatifValidated = $request->validate([
             'wilayah' => 'required',
             'alamat' => 'required',
-            'periode' => 'required',
+            'periode' => 'required|string',
         ]);
 
         try {

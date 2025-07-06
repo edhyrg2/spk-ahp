@@ -107,52 +107,68 @@ class PerbandinganKriteriaController extends Controller
      */
     public function store(Request $request)
     {
+        // Validasi input
+        $request->validate([
+            'periode' => 'required',
+            'arah' => 'required|array',
+            'nilai' => 'required|array',
+        ]);
+
         $periodes = Periode::all();
         $periode = $request->input('periode');
         $arahInput = $request->input('arah');   // Array: arah[A][B]
         $nilaiInput = $request->input('nilai'); // Array: nilai[A][B]
-        // dd($arahInput, $nilaiInput);
+
+        // Debug untuk cek apakah periode diterima
+        if (!$periode) {
+            return redirect()->route('perbandingan-kriteria.index.admin')
+                ->with('error', 'Periode tidak ditemukan. Silakan pilih periode terlebih dahulu.');
+        }
+
+        // dd($arahInput, $nilaiInput, $periode); // Uncomment untuk debug
 
         // $kriteriaIds = array_merge(
         //     array_keys($arahInput),
         //     array_keys($nilaiInput)
         // );
 
-        $kriteriaIds = Kriteria::pluck('id')->toArray();
+        // Ambil kriteria sesuai periode yang dipilih
+        $kriteriaIds = Kriteria::where('periode', $periode)->pluck('id')->toArray();
         $n = count($kriteriaIds);
+
+        if (empty($kriteriaIds)) {
+            return redirect()->route('perbandingan-kriteria.index.admin', ['periode' => $periode])
+                ->with('error', 'Tidak ada kriteria pada periode yang dipilih.');
+        }
 
         $matrix = $this->buildComparisonMatrix($kriteriaIds, $nilaiInput, $arahInput);
 
-        // $eigenResult = $this->calculateEigenVector($matrix, $kriteriaIds);
-        // $normalized = $eigenResult['normalized'];
-        // $eigen_vector = $eigenResult['eigen_vector'];
-
-        // $consistencyResult = $this->calculateConsistencyRatio($matrix, $eigen_vector, $kriteriaIds);
-        // $lambda_max = $consistencyResult['lambda_max'];
-        // $ci = $consistencyResult['ci'];
-        // $cr = $consistencyResult['cr'];
+        // Hapus data lama untuk periode ini terlebih dahulu untuk menghindari conflict
+        PerbandinganKriteria::where('periode', $periode)
+            ->whereIn('kriteria1_id', $kriteriaIds)
+            ->whereIn('kriteria2_id', $kriteriaIds)
+            ->delete();
 
         foreach ($kriteriaIds as $id1) {
             foreach ($kriteriaIds as $id2) {
+                if ($id1 == $id2) continue; // Lewati data diagonal
+
                 $nilaiFinal = $matrix[$id1][$id2];
-                PerbandinganKriteria::updateOrCreate(
-                    [
-                        'kriteria1_id' => $id1,
-                        'kriteria2_id' => $id2,
-                        'periode' => $periode,
-                    ],
-                    [
-                        'nilai' => $nilaiFinal,
-                    ]
-                );
+                PerbandinganKriteria::create([
+                    'kriteria1_id' => $id1,
+                    'kriteria2_id' => $id2,
+                    'periode' => $periode,
+                    'nilai' => $nilaiFinal,
+                ]);
             }
         }
 
         $kriteriaList = Kriteria::whereIn('id', $kriteriaIds)->pluck('nama_kriteria', 'id')->toArray();
-        $kriteria = Kriteria::all();
-        $perbandingan = PerbandinganKriteria::all();
+        $kriteria = Kriteria::where('periode', $periode)->get();
+        $perbandingan = PerbandinganKriteria::where('periode', $periode)->get();
 
-        return view('Admin.perbandingan-kriteria.index', compact('kriteria', 'perbandingan', 'kriteriaList', 'periodes'))->with('success', 'Perbandingan kriteria berhasil disimpan.');
+        return redirect()->route('perbandingan-kriteria.index.admin', ['periode' => $periode])
+            ->with('success', 'Perbandingan kriteria berhasil disimpan.');
     }
 
     /**

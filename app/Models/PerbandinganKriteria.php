@@ -10,18 +10,19 @@ class PerbandinganKriteria extends Model
     use HasFactory;
 
     protected $table = 'perbandingan_kriteria';
-    
+
     protected $fillable = [
         'kriteria1_id',
         'kriteria2_id',
-        'nilai'
+        'nilai',
+        'periode'
     ];
 
     protected $casts = [
         'nilai' => 'float'
     ];
 
-    
+
     public function kriteria1()
     {
         return $this->belongsTo(Kriteria::class, 'kriteria1_id');

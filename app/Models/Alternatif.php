@@ -15,6 +15,7 @@ class Alternatif extends Model
         'wilayah',
         'alamat',
         'periode',
+        'pilih', // Tambahkan kolom pilih
     ];
 
     public function perbandingan()
