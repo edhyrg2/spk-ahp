@@ -48,8 +48,12 @@ class PerbandinganKriteriaController extends Controller
         if ($n > 0 && $perbandingan->count() > 0) {
             foreach ($kriteriaIds as $rowId) {
                 foreach ($kriteriaIds as $colId) {
-                    $item = $perbandingan->where('kriteria1_id', $rowId)->where('kriteria2_id', $colId)->first();
-                    $matrix[$rowId][$colId] = $item ? $item->nilai : 0;
+                    if ($rowId == $colId) {
+                        $matrix[$rowId][$colId] = 1; // Diagonal harus 1
+                    } else {
+                        $item = $perbandingan->where('kriteria1_id', $rowId)->where('kriteria2_id', $colId)->first();
+                        $matrix[$rowId][$colId] = $item ? $item->nilai : 0;
+                    }
                 }
             }
             $eigenResult = $this->calculateEigenVector($matrix, $kriteriaIds);
@@ -62,21 +66,21 @@ class PerbandinganKriteriaController extends Controller
             $ci = $consistencyResult['ci'];
             $cr = $consistencyResult['cr'];
         } else {
-            // Jika tidak ada data, isi semua matrix, eigen_vector, normalized, dll dengan 0
-            foreach ($kriteriaIds as $rowId) {
-                foreach ($kriteriaIds as $colId) {
-                    $matrix[$rowId][$colId] = 0;
-                }
+        // Jika tidak ada data, isi matrix diagonal dengan 1, lainnya 0
+        foreach ($kriteriaIds as $rowId) {
+            foreach ($kriteriaIds as $colId) {
+                $matrix[$rowId][$colId] = ($rowId == $colId) ? 1 : 0;
             }
-            $normalized = [];
-            $eigen_vector = [];
-            foreach ($kriteriaIds as $id) {
-                $eigen_vector[$id] = 0;
-                $normalized[$id] = array_fill_keys($kriteriaIds, 0);
-            }
-            $lambda_max = 0;
-            $ci = 0;
-            $cr = 0;
+        }
+        $normalized = [];
+        $eigen_vector = [];
+        foreach ($kriteriaIds as $id) {
+            $eigen_vector[$id] = 0;
+            $normalized[$id] = array_fill_keys($kriteriaIds, 0);
+        }
+        $lambda_max = 0;
+        $ci = 0;
+        $cr = 0;
         }
 
         return view('Admin.hasil-perbandingan-kriteria.index', compact(

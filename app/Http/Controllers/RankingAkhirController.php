@@ -9,6 +9,8 @@ use App\Models\PerbandinganAlternatif;
 use App\Models\Alternatif;
 use App\Models\Periode;
 use PhpOffice\PhpWord\TemplateProcessor;
+use setasign\Fpdi\Tcpdf\Fpdi;
+use TCPDF;
 use PDF;
 
 class RankingAkhirController extends Controller
@@ -205,8 +207,91 @@ class RankingAkhirController extends Controller
 
     public function print(Request $request)
     {
+        ini_set('max_execution_time', 300);
+        ini_set('memory_limit', '512M');
+
         $periode = $request->input('periode');
-        // Ambil alternatif terpilih (misal yang field 'pilih' == 'Dipilih' dan periode sesuai)
+
+        // Ambil alternatif terpilih
+        $alternatif = \App\Models\Alternatif::where('periode', $periode)->where('pilih', 'Dipilih')->first();
+
+        if (!$alternatif) {
+            return back()->with('error', 'Belum ada alternatif terpilih.');
+        }
+
+        // Path template PDF
+        $templatePath = storage_path('app/template_surat.pdf');
+
+        if (!file_exists($templatePath)) {
+            return back()->with('error', 'Template PDF tidak ditemukan di: ' . $templatePath);
+        }
+
+        try {
+            // Create PDF instance dengan konfigurasi minimal
+            $pdf = new Fpdi('P', 'mm', 'A4');
+            $pdf->setSourceFile($templatePath);
+
+            // Import halaman pertama dari template
+            $tplId = $pdf->importPage(1);
+            $pdf->AddPage();
+            $pdf->useTemplate($tplId);
+
+            // Set font untuk text yang akan ditambahkan
+            // Gunakan font core yang pasti ada
+            try {
+                $pdf->SetFont('helvetica', '', 12);
+            } catch (\Exception $fontError) {
+                // Fallback ke font default jika helvetica tidak ada
+                $pdf->SetFont('courier', '', 12);
+            }
+
+            // Tambahkan text ke posisi tertentu (sesuaikan koordinat X, Y)
+            // Koordinat dalam milimeter (0,0 = kiri atas)
+
+            // Contoh: Isi wilayah di posisi tertentu
+            $pdf->SetXY(50, 80); // X=50mm, Y=80mm dari kiri atas
+            $pdf->Cell(100, 8, 'Wilayah: ' . $alternatif->wilayah, 0, 1);
+
+            // Isi alamat
+            $pdf->SetXY(50, 90);
+            $pdf->Cell(100, 8, 'Alamat: ' . $alternatif->alamat, 0, 1);
+
+            // Isi periode
+            $pdf->SetXY(50, 100);
+            $pdf->Cell(100, 8, 'Periode: ' . $periode, 0, 1);
+
+            // Isi tanggal
+            $pdf->SetXY(50, 110);
+            $pdf->Cell(100, 8, 'Tanggal: ' . date('d F Y'), 0, 1);
+
+            // Isi nomor surat
+            $pdf->SetXY(50, 120);
+            $pdf->Cell(100, 8, 'Nomor: ' . sprintf('%03d/AHP/%s', rand(1, 999), date('Y')), 0, 1);
+
+            // Simpan PDF ke file temporary dulu
+            $tempDir = storage_path('app/temp');
+            if (!file_exists($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+
+            $filename = 'Surat_Hasil_Ranking_' . $periode . '.pdf';
+            $tempPath = $tempDir . '/' . $filename;
+
+            // Simpan ke file
+            $pdf->Output($tempPath, 'F');
+
+            // Download dari file temporary
+            return response()->download($tempPath)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error saat generate PDF: ' . $e->getMessage());
+        }
+    }
+
+    public function printWord(Request $request)
+    {
+        $periode = $request->input('periode');
+
+        // Ambil alternatif terpilih
         $alternatif = \App\Models\Alternatif::where('periode', $periode)->where('pilih', 'Dipilih')->first();
 
         if (!$alternatif) {
@@ -214,17 +299,30 @@ class RankingAkhirController extends Controller
         }
 
         $templatePath = storage_path('app/template_surat.docx');
-        $templateProcessor = new TemplateProcessor($templatePath);
 
-        // Set value placeholder di template
-        $templateProcessor->setValue('wilayah', $alternatif->wilayah);
+        if (!file_exists($templatePath)) {
+            return back()->with('error', 'Template Word tidak ditemukan di: ' . $templatePath);
+        }
 
-        // Simpan file hasil
-        $outputPath = storage_path('app/surat_hasil_ranking.docx');
-        $templateProcessor->saveAs($outputPath);
+        try {
+            $templateProcessor = new TemplateProcessor($templatePath);
 
-        // Download file
-        return response()->download($outputPath)->deleteFileAfterSend(true);
+            // Set value placeholder di template Word
+            $templateProcessor->setValue('wilayah', $alternatif->wilayah);
+            $templateProcessor->setValue('alamat', $alternatif->alamat);
+            $templateProcessor->setValue('periode', $periode);
+            $templateProcessor->setValue('tanggal', date('d F Y'));
+            $templateProcessor->setValue('nomor', sprintf('%03d/AHP/%s', rand(1, 999), date('Y')));
+
+            // Simpan file hasil
+            $outputPath = storage_path('app/temp/surat_hasil_ranking_' . time() . '.docx');
+            $templateProcessor->saveAs($outputPath);
+
+            // Download file
+            return response()->download($outputPath)->deleteFileAfterSend(true);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error saat generate Word: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -273,5 +371,78 @@ class RankingAkhirController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    public function printPdfSimple(Request $request)
+    {
+        $periode = $request->input('periode');
+
+        // Ambil alternatif terpilih
+        $alternatif = \App\Models\Alternatif::where('periode', $periode)->where('pilih', 'Dipilih')->first();
+
+        if (!$alternatif) {
+            return back()->with('error', 'Belum ada alternatif terpilih.');
+        }
+
+        // Data untuk PDF
+        $data = [
+            'wilayah' => $alternatif->wilayah,
+            'alamat' => $alternatif->alamat,
+            'periode' => $periode,
+            'tanggal' => date('d F Y'),
+            'nomor' => sprintf('%03d/AHP/%s', rand(1, 999), date('Y'))
+        ];
+
+        // HTML template sederhana
+        $html = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Surat Hasil Ranking</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.6; }
+                .header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 30px; padding-bottom: 20px; }
+                .content { margin: 30px 0; }
+                .info { margin: 20px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>SURAT HASIL PEMILIHAN LOKASI</h2>
+                <p>ANALYTIC HIERARCHY PROCESS (AHP)</p>
+            </div>
+            
+            <div class="content">
+                <div class="info">
+                    <p><strong>Nomor:</strong> ' . $data['nomor'] . '</p>
+                    <p><strong>Tanggal:</strong> ' . $data['tanggal'] . '</p>
+                </div>
+                
+                <p>Berdasarkan hasil analisis menggunakan metode AHP periode <strong>' . $data['periode'] . '</strong>, 
+                wilayah yang terpilih adalah:</p>
+                
+                <div class="info">
+                    <p><strong>Wilayah:</strong> ' . $data['wilayah'] . '</p>
+                    <p><strong>Alamat:</strong> ' . $data['alamat'] . '</p>
+                    <p><strong>Periode:</strong> ' . $data['periode'] . '</p>
+                </div>
+                
+                <p>Demikian surat ini dibuat untuk dapat dipergunakan sebagaimana mestinya.</p>
+            </div>
+            
+            <div style="margin-top: 50px; text-align: right;">
+                <p>Kepala Dinas</p>
+                <br><br><br>
+                <p><strong>_______________________</strong></p>
+            </div>
+        </body>
+        </html>';
+
+        // Generate PDF dengan DOMPDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download('Surat_Hasil_Ranking_' . $periode . '.pdf');
     }
 }

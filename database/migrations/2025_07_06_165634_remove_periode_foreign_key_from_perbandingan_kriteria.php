@@ -14,13 +14,13 @@ return new class extends Migration
     {
         // Cek apakah index ada terlebih dahulu
         $indexExists = collect(DB::select("SHOW INDEX FROM perbandingan_kriteria WHERE Key_name = 'perbandingan_kriteria_periode_index'"))->isNotEmpty();
-        
+
         Schema::table('perbandingan_kriteria', function (Blueprint $table) use ($indexExists) {
             // Hapus index hanya jika ada
             if ($indexExists) {
                 $table->dropIndex('perbandingan_kriteria_periode_index');
             }
-            
+
             // Pastikan kolom periode adalah string/varchar biasa
             $table->string('periode')->nullable()->change();
         });

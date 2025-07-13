@@ -35,7 +35,7 @@ class AlternatifController extends Controller
     {
         $periodes = Periode::all();
         $periodeId = $request->input('periode');
-        
+
         return view('Admin.alternatif.create', compact('periodes', 'periodeId'));
     }
 
@@ -50,15 +50,15 @@ class AlternatifController extends Controller
             'periode' => 'required|string',
             'pilih' => 'nullable|string',
         ]);
-        
+
         // Set default value untuk pilih jika tidak ada
         if (!isset($alternatifValidated['pilih']) || empty($alternatifValidated['pilih'])) {
             $alternatifValidated['pilih'] = 'Tidak Dipilih';
         }
-        
+
         // Debug: uncomment untuk melihat data yang akan disimpan
         // dd($alternatifValidated);
-        
+
         try {
             DB::beginTransaction();
 
