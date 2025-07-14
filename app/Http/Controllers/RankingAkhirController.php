@@ -313,9 +313,6 @@ class RankingAkhirController extends Controller
             $html .= '<td>' . ($i + 1) . '</td>';
             $html .= '</tr>';
         }
-        for ($j = count($sorted); $j < 6; $j++) {
-            $html .= '<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
-        }
         $html .= '</tbody></table></div>';
         $html .= '<div class="footer"><div class="signature"><br><br><br><p>Mengetahui<br>Founder Artolouis</p><br><br><br><p style="margin-top:40px;">Aldous Lukito</p></div></div>';
         $html .= '</body></html>';
