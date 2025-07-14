@@ -211,80 +211,119 @@ class RankingAkhirController extends Controller
         ini_set('memory_limit', '512M');
 
         $periode = $request->input('periode');
+        $periodeObj = \App\Models\Periode::where('nama_periode', $periode)->first();
+        $alternatif = \App\Models\Alternatif::where('periode', $periode)->get();
 
-        // Ambil alternatif terpilih
-        $alternatif = \App\Models\Alternatif::where('periode', $periode)->where('pilih', 'Dipilih')->first();
+        // Hitung ranking akhir
+        $kriteria = Kriteria::where('periode', $periode)->get();
+        $perbandingan = PerbandinganKriteria::where('periode', $periode)->get();
+        $kriteriaIds = Kriteria::where('periode', $periode)->pluck('id')->toArray();
+        $nilaiAkhir = [];
 
-        if (!$alternatif) {
-            return back()->with('error', 'Belum ada alternatif terpilih.');
-        }
-
-        // Path template PDF
-        $templatePath = storage_path('app/template_surat.pdf');
-
-        if (!file_exists($templatePath)) {
-            return back()->with('error', 'Template PDF tidak ditemukan di: ' . $templatePath);
-        }
-
-        try {
-            // Create PDF instance dengan konfigurasi minimal
-            $pdf = new Fpdi('P', 'mm', 'A4');
-            $pdf->setSourceFile($templatePath);
-
-            // Import halaman pertama dari template
-            $tplId = $pdf->importPage(1);
-            $pdf->AddPage();
-            $pdf->useTemplate($tplId);
-
-            // Set font untuk text yang akan ditambahkan
-            // Gunakan font core yang pasti ada
-            try {
-                $pdf->SetFont('helvetica', '', 12);
-            } catch (\Exception $fontError) {
-                // Fallback ke font default jika helvetica tidak ada
-                $pdf->SetFont('courier', '', 12);
+        if ($kriteria->isEmpty() || $alternatif->isEmpty() || $perbandingan->isEmpty()) {
+            foreach ($alternatif as $alt) {
+                $nilaiAkhir[$alt->id] = 0;
             }
-
-            // Tambahkan text ke posisi tertentu (sesuaikan koordinat X, Y)
-            // Koordinat dalam milimeter (0,0 = kiri atas)
-
-            // Contoh: Isi wilayah di posisi tertentu
-            $pdf->SetXY(50, 80); // X=50mm, Y=80mm dari kiri atas
-            $pdf->Cell(100, 8, 'Wilayah: ' . $alternatif->wilayah, 0, 1);
-
-            // Isi alamat
-            $pdf->SetXY(50, 90);
-            $pdf->Cell(100, 8, 'Alamat: ' . $alternatif->alamat, 0, 1);
-
-            // Isi periode
-            $pdf->SetXY(50, 100);
-            $pdf->Cell(100, 8, 'Periode: ' . $periode, 0, 1);
-
-            // Isi tanggal
-            $pdf->SetXY(50, 110);
-            $pdf->Cell(100, 8, 'Tanggal: ' . date('d F Y'), 0, 1);
-
-            // Isi nomor surat
-            $pdf->SetXY(50, 120);
-            $pdf->Cell(100, 8, 'Nomor: ' . sprintf('%03d/AHP/%s', rand(1, 999), date('Y')), 0, 1);
-
-            // Simpan PDF ke file temporary dulu
-            $tempDir = storage_path('app/temp');
-            if (!file_exists($tempDir)) {
-                mkdir($tempDir, 0755, true);
+        } else {
+            $matrix_kriteria = [];
+            foreach ($kriteriaIds as $rowId) {
+                foreach ($kriteriaIds as $colId) {
+                    $nilai = $perbandingan->where('kriteria1_id', $rowId)->where('kriteria2_id', $colId)->first();
+                    $matrix_kriteria[$rowId][$colId] = $nilai ? $nilai->nilai : 1;
+                }
             }
-
-            $filename = 'Surat_Hasil_Ranking_' . $periode . '.pdf';
-            $tempPath = $tempDir . '/' . $filename;
-
-            // Simpan ke file
-            $pdf->Output($tempPath, 'F');
-
-            // Download dari file temporary
-            return response()->download($tempPath)->deleteFileAfterSend(true);
-        } catch (\Exception $e) {
-            return back()->with('error', 'Error saat generate PDF: ' . $e->getMessage());
+            $eigen_kriteria = $this->calculateEigenVector($matrix_kriteria, $kriteriaIds);
+            $bobotKriteria = $eigen_kriteria['eigen_vector'];
+            foreach ($alternatif as $alt) {
+                $total = 0;
+                foreach ($kriteria as $k) {
+                    $rel = PerbandinganAlternatif::where('kriteria_id', $k->id)->get();
+                    $altIds = $alternatif->pluck('id')->toArray();
+                    $matrix = [];
+                    foreach ($altIds as $i) {
+                        foreach ($altIds as $j) {
+                            if ($i == $j) {
+                                $matrix[$i][$j] = 1;
+                            } else {
+                                $nilaiLangsung = $rel->first(function ($item) use ($i, $j) {
+                                    return $item->alternatif1_id == $i && $item->alternatif2_id == $j;
+                                });
+                                if ($nilaiLangsung) {
+                                    $matrix[$i][$j] = $nilaiLangsung->nilai;
+                                } else {
+                                    $nilaiKebalikan = $rel->first(function ($item) use ($i, $j) {
+                                        return $item->alternatif1_id == $j && $item->alternatif2_id == $i;
+                                    });
+                                    $matrix[$i][$j] = $nilaiKebalikan ? 1 / $nilaiKebalikan->nilai : 1;
+                                }
+                            }
+                        }
+                    }
+                    $eigenAlt = $this->calculateEigenVector($matrix, $altIds);
+                    $bobotAlternatif = $eigenAlt['eigen_vector'];
+                    $total += $bobotKriteria[$k->id] * ($bobotAlternatif[$alt->id] ?? 0);
+                }
+                $nilaiAkhir[$alt->id] = $total;
+            }
         }
+        $ranked = collect($nilaiAkhir)->sortDesc();
+
+        // Generate HTML sesuai format gambar
+        $html = '<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Laporan Hasil Pengambilan Keputusan AHP</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 30px; line-height: 1.6; }
+                .header { text-align: center; margin-bottom: 10px; }
+                .header h2 { font-size: 22px; font-weight: bold; margin-bottom: 0; }
+                hr { margin: 20px 0; }
+                .table-wrap { margin-top: 40px; }
+                table { width: 80%; margin: 0 auto 30px auto; border-collapse: collapse; }
+                th, td { border: 1px solid #000; padding: 8px; text-align: center; }
+                th { background: #fff; font-weight: bold; }
+                .footer { margin-top: 80px; }
+                .signature { float: right; width: 250px; text-align: center; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>Laporan Hasil Pengambilan Keputusan Dengan Metode Analytical Hierarchy Process (AHP) Lokasi Toko Strategis Terbaik Pada Artolouis</h2>
+                <hr>
+            </div>
+            <div class="table-wrap">
+                <h3 style="text-align:center; margin-bottom:20px;">Rangking Akhir Alternatif</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Wilayah</th>
+                            <th>Skor Akhir</th>
+                            <th>Peringkat</th>
+                        </tr>
+                    </thead>
+                    <tbody>';
+        $sorted = $alternatif->sortByDesc(function ($alt) use ($ranked) {
+            return $ranked[$alt->id] ?? 0;
+        })->values();
+        foreach ($sorted as $i => $alt) {
+            $html .= '<tr>';
+            $html .= '<td>' . $alt->wilayah . '</td>';
+            $html .= '<td>' . number_format($ranked[$alt->id] ?? 0, 4) . '</td>';
+            $html .= '<td>' . ($i + 1) . '</td>';
+            $html .= '</tr>';
+        }
+        for ($j = count($sorted); $j < 6; $j++) {
+            $html .= '<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';
+        }
+        $html .= '</tbody></table></div>';
+        $html .= '<div class="footer"><div class="signature"><br><br><br><p>Mengetahui<br>Founder Artolouis</p><br><br><br><p style="margin-top:40px;">Aldous Lukito</p></div></div>';
+        $html .= '</body></html>';
+
+        // Generate PDF dengan DOMPDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf->setPaper('A4', 'portrait');
+        return $pdf->download('Laporan_AHP_' . $periode . '.pdf');
     }
 
     public function printWord(Request $request)

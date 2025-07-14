@@ -8,14 +8,11 @@
                 <h5 class="text-gray-900">Hasil Akhir Pemilihan Alternatif</h5>
                 @if(request('periode'))
                 <div class="btn-group">
-                    <a href="{{ route('ranking-akhir.print', ['periode' => request('periode')]) }}" class="btn btn-success" target="_blank">
-                        <i class="fas fa-file-pdf"></i> Cetak PDF Template
-                    </a>
-                    <a href="{{ route('ranking-akhir.print.simple', ['periode' => request('periode')]) }}" class="btn btn-info" target="_blank">
-                        <i class="fas fa-file-pdf"></i> Cetak PDF Simple
-                    </a>
                     <a href="{{ route('ranking-akhir.print.word', ['periode' => request('periode')]) }}" class="btn btn-primary" target="_blank">
-                        <i class="fas fa-file-word"></i> Cetak Word
+                        <i class="fas fa-file-word"></i> Cetak Surat Keputusan
+                    </a>
+                    <a href="{{ route('ranking-akhir.print', ['periode' => request('periode')]) }}" class="btn btn-success ml-2" target="_blank">
+                        <i class="fas fa-print"></i> Print Laporan AHP
                     </a>
                 </div>
                 @endif

@@ -66,21 +66,21 @@ class PerbandinganKriteriaController extends Controller
             $ci = $consistencyResult['ci'];
             $cr = $consistencyResult['cr'];
         } else {
-        // Jika tidak ada data, isi matrix diagonal dengan 1, lainnya 0
-        foreach ($kriteriaIds as $rowId) {
-            foreach ($kriteriaIds as $colId) {
-                $matrix[$rowId][$colId] = ($rowId == $colId) ? 1 : 0;
+            // Jika tidak ada data, isi matrix diagonal dengan 1, lainnya 0
+            foreach ($kriteriaIds as $rowId) {
+                foreach ($kriteriaIds as $colId) {
+                    $matrix[$rowId][$colId] = ($rowId == $colId) ? 1 : 0;
+                }
             }
-        }
-        $normalized = [];
-        $eigen_vector = [];
-        foreach ($kriteriaIds as $id) {
-            $eigen_vector[$id] = 0;
-            $normalized[$id] = array_fill_keys($kriteriaIds, 0);
-        }
-        $lambda_max = 0;
-        $ci = 0;
-        $cr = 0;
+            $normalized = [];
+            $eigen_vector = [];
+            foreach ($kriteriaIds as $id) {
+                $eigen_vector[$id] = 0;
+                $normalized[$id] = array_fill_keys($kriteriaIds, 0);
+            }
+            $lambda_max = 0;
+            $ci = 0;
+            $cr = 0;
         }
 
         return view('Admin.hasil-perbandingan-kriteria.index', compact(
@@ -237,11 +237,11 @@ class PerbandinganKriteriaController extends Controller
 
                 // Build matrix based on direction
                 if ($arah === 'AB') {
-                    $matrix[$id1][$id2] = (float)$nilai;
-                    $matrix[$id2][$id1] = round(1 / (float)$nilai, 4);
+                    $matrix[$id1][$id2] = round((float)$nilai, 3);
+                    $matrix[$id2][$id1] = round(1 / (float)$nilai, 3);
                 } else { // BA
-                    $matrix[$id2][$id1] = (float)$nilai;
-                    $matrix[$id1][$id2] = round(1 / (float)$nilai, 4);
+                    $matrix[$id2][$id1] = round((float)$nilai, 3);
+                    $matrix[$id1][$id2] = round(1 / (float)$nilai, 3);
                 }
             }
         }
@@ -276,10 +276,10 @@ class PerbandinganKriteriaController extends Controller
         foreach ($kriteriaIds as $i) {
             $sumRow = 0;
             foreach ($kriteriaIds as $j) {
-                $normalized[$i][$j] = $matrix[$i][$j] / $columnSums[$j];
+                $normalized[$i][$j] = round($matrix[$i][$j] / $columnSums[$j], 3);
                 $sumRow += $normalized[$i][$j];
             }
-            $eigen_vector[$i] = round($sumRow / $n, 4);
+            $eigen_vector[$i] = round($sumRow / $n, 3);
         }
 
         return [
@@ -309,13 +309,13 @@ class PerbandinganKriteriaController extends Controller
             }
             $lambda_max += $weightedSum / $eigen_vector[$i];
         }
-        $lambda_max = $lambda_max / $n;
+        $lambda_max = round($lambda_max / $n, 3);
 
         // Calculate CI & CR
-        $ci = ($lambda_max - $n) / ($n - 1);
+        $ci = round(($lambda_max - $n) / ($n - 1), 3);
         $riTable = [0.00, 0.00, 0.58, 0.90, 1.12, 1.24, 1.32, 1.41, 1.45, 1.49];
         $ri = $riTable[$n - 1] ?? 1.49;
-        $cr = ($ri == 0) ? 0 : $ci / $ri;
+        $cr = ($ri == 0) ? 0 : round($ci / $ri, 3);
 
         return [
             'lambda_max' => $lambda_max,
