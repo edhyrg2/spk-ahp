@@ -23,7 +23,7 @@
                     <tr>
                         <th>{{ $row->wilayah }}</th>
                         @foreach($alternatif as $col)
-                        <td>{{ number_format($matrix[$row->id][$col->id], 4) }}</td>
+                        <td>{{ number_format($matrix[$row->id][$col->id], 3) }}</td>
                         @endforeach
                     </tr>
                     @endforeach
@@ -48,9 +48,9 @@
                     <tr>
                         <th>{{ $row->wilayah }}</th>
                         @foreach($alternatif as $col)
-                        <td>{{ number_format($normalized[$row->id][$col->id], 4) }}</td>
+                        <td>{{ number_format($normalized[$row->id][$col->id], 3) }}</td>
                         @endforeach
-                        <td class="font-weight-bold text-success">{{ number_format($eigen_vector[$row->id], 4) }}</td>
+                        <td class="font-weight-bold text-success">{{ number_format($eigen_vector[$row->id], 3) }}</td>
                     </tr>
                     @endforeach
                 </tbody>

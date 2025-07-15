@@ -158,6 +158,7 @@ class PerbandinganKriteriaController extends Controller
                 if ($id1 == $id2) continue; // Lewati data diagonal
 
                 $nilaiFinal = $matrix[$id1][$id2];
+                // Simpan tanpa pembulatan
                 PerbandinganKriteria::create([
                     'kriteria1_id' => $id1,
                     'kriteria2_id' => $id2,
@@ -237,11 +238,11 @@ class PerbandinganKriteriaController extends Controller
 
                 // Build matrix based on direction
                 if ($arah === 'AB') {
-                    $matrix[$id1][$id2] = round((float)$nilai, 3);
-                    $matrix[$id2][$id1] = round(1 / (float)$nilai, 3);
+                    $matrix[$id1][$id2] = (float)$nilai;
+                    $matrix[$id2][$id1] = 1 / (float)$nilai;
                 } else { // BA
-                    $matrix[$id2][$id1] = round((float)$nilai, 3);
-                    $matrix[$id1][$id2] = round(1 / (float)$nilai, 3);
+                    $matrix[$id2][$id1] = (float)$nilai;
+                    $matrix[$id1][$id2] = 1 / (float)$nilai;
                 }
             }
         }
@@ -276,10 +277,10 @@ class PerbandinganKriteriaController extends Controller
         foreach ($kriteriaIds as $i) {
             $sumRow = 0;
             foreach ($kriteriaIds as $j) {
-                $normalized[$i][$j] = round($matrix[$i][$j] / $columnSums[$j], 3);
+                $normalized[$i][$j] = $matrix[$i][$j] / $columnSums[$j];
                 $sumRow += $normalized[$i][$j];
             }
-            $eigen_vector[$i] = round($sumRow / $n, 3);
+            $eigen_vector[$i] = $sumRow / $n;
         }
 
         return [
@@ -309,13 +310,13 @@ class PerbandinganKriteriaController extends Controller
             }
             $lambda_max += $weightedSum / $eigen_vector[$i];
         }
-        $lambda_max = round($lambda_max / $n, 3);
+        $lambda_max = $lambda_max / $n;
 
         // Calculate CI & CR
-        $ci = round(($lambda_max - $n) / ($n - 1), 3);
+        $ci = ($lambda_max - $n) / ($n - 1);
         $riTable = [0.00, 0.00, 0.58, 0.90, 1.12, 1.24, 1.32, 1.41, 1.45, 1.49];
         $ri = $riTable[$n - 1] ?? 1.49;
-        $cr = ($ri == 0) ? 0 : round($ci / $ri, 3);
+        $cr = ($ri == 0) ? 0 : $ci / $ri;
 
         return [
             'lambda_max' => $lambda_max,

@@ -37,7 +37,7 @@
                         <tr>
                             <th>{{ is_object($rowId) ? $rowId->nama_kriteria : $kriteria->firstWhere('id', $rowId)->nama_kriteria }}</th>
                             @foreach ($kriteriaIds as $colId)
-                            <td>{{ number_format($matrix[$rowId][$colId], 4) }}</td>
+                            <td>{{ number_format($matrix[$rowId][$colId], 3) }}</td>
                             @endforeach
                         </tr>
                         @endforeach
@@ -61,9 +61,9 @@
                         <tr>
                             <th>{{ is_object($rowId) ? $rowId->nama_kriteria : $kriteria->firstWhere('id', $rowId)->nama_kriteria }}</th>
                             @foreach ($kriteriaIds as $colId)
-                            <td>{{ number_format($normalized[$rowId][$colId], 4) }}</td>
+                            <td>{{ number_format($normalized[$rowId][$colId], 3) }}</td>
                             @endforeach
-                            <td><strong>{{ number_format($eigen_vector[$rowId], 4) }}</strong></td>
+                            <td><strong>{{ number_format($eigen_vector[$rowId], 3) }}</strong></td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -74,8 +74,8 @@
 
             <h6 class="text-gray-900">Nilai Konsistensi</h6>
             <ul>
-                <li class="text-gray-900"><strong class="text-gray-900">λ Max:</strong> {{ $lambda_max }}</li>
-                <li class="text-gray-900"><strong class="text-gray-900">CI (Consistency Index):</strong> {{ $ci }}</li>
+                <li class="text-gray-900"><strong class="text-gray-900">λ Max:</strong> {{ number_format($lambda_max,3) }}</li>
+                <li class="text-gray-900"><strong class="text-gray-900">CI (Consistency Index):</strong> {{ number_format($ci,3) }}</li>
                 <li class="text-gray-900"><strong class="text-gray-900">CR (Consistency Ratio):</strong> <span class="{{ $cr < 0.1 ? 'text-success' : 'text-danger' }}">{{ $cr }} / {{ number_format($cr * 100, 2) }}%</span></li>
             </ul>
 
